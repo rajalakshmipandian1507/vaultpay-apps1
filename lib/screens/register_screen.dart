@@ -21,7 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool loading = false;
 
   // CHANGE THIS to your laptop IPv4 address
-  final String backendUrl = "http://YOUR_IP_ADDRESS:5000";
+  final String backendUrl = "http://192.168.129.73:5000";
 
   Future<void> registerUser() async {
     if (nameController.text.isEmpty ||
@@ -39,6 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       loading = true;
     });
+    
 
     try {
       final response = await http.post(
@@ -47,15 +48,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           "Content-Type": "application/json",
         },
         body: jsonEncode({
-          "name": nameController.text.trim(),
-          "mobile": mobileController.text.trim(),
-          "aadhaar": aadhaarController.text.trim(),
-          "pin": pinController.text.trim(),
-          "bankName": bankController.text.trim(),
-          "accountNumber": accountController.text.trim(),
-          "ifsc": ifscController.text.trim(),
-        }),
-      );
+          "fullName": nameController.text.trim(),
+           "mobileNumber": mobileController.text.trim(),
+           "aadhaarNumber": aadhaarController.text.trim(),
+           "pin": pinController.text.trim(),
+           "bankName": bankController.text.trim(),
+           "accountNumber": accountController.text.trim(),
+          "ifscCode": ifscController.text.trim(),
+          }),
+          );
+
 
       final data = jsonDecode(response.body);
 
