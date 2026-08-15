@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'screens/register_screen.dart';
 
 void main() {
   runApp(const VaultPayApp());
@@ -16,7 +17,7 @@ class VaultPayApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Arial',
       ),
-      home: const VaultPayHome(),
+      home: const RegisterScreen(),
     );
   }
 }
