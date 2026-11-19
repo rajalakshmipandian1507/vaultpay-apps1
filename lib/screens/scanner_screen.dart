@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,6 +36,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
   bool muleAccount = false;
   bool liveVideo = false;
   bool scamSms = false;
+  bool suspiciousApk = false;
+
+  // Risk reasons for demo
+  List<String> riskReasons = [];
 
   // Registered user details
   String registeredPin = "";
@@ -209,6 +214,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     if (muleAccount ||
         liveVideo ||
         scamSms ||
+        suspiciousApk ||
         amount >= 60000) {
       return "HIGH";
     }
@@ -278,6 +284,97 @@ class _ScannerScreenState extends State<ScannerScreen> {
   }
 
   // ============================================================
+  // GET DEMO RISK REASONS
+  // ============================================================
+
+  List<String> getRiskReasons(String risk) {
+    final List<String> reasons = [];
+
+    final double amount =
+        double.tryParse(amountController.text.trim()) ?? 0;
+
+    final demoRisk = demoQrRisk(scannedText);
+
+    // QR DEMO CLASSIFICATION HAS PRIORITY
+    if (demoRisk.isNotEmpty && demoRisk == risk) {
+      final firstCharacter = scannedText.trim().substring(0, 1);
+
+      reasons.add(
+        "Demo QR pattern: QR starts with $firstCharacter",
+      );
+
+      if (risk == "HIGH") {
+        reasons.add("QR demo classification: HIGH RISK");
+      } else if (risk == "MEDIUM") {
+        reasons.add("QR demo classification: MEDIUM RISK");
+      } else {
+        reasons.add("QR demo classification: LOW RISK");
+      }
+
+      return reasons;
+    }
+
+    // HIGH RISK REASONS
+    if (risk == "HIGH") {
+      if (liveVideo) {
+        reasons.add("Live video call detected");
+      }
+
+      if (muleAccount) {
+        reasons.add("Mule account detected");
+      }
+
+      if (scamSms) {
+        reasons.add("Scam SMS detected");
+      }
+
+      if (suspiciousApk) {
+        reasons.add("Suspicious APK detected");
+      }
+
+      if (amount >= 60000) {
+        reasons.add("Large transaction amount detected");
+      }
+    }
+
+    // MEDIUM RISK REASONS
+    else if (risk == "MEDIUM") {
+      if (unusualTime) {
+        reasons.add("Unusual transaction time");
+      }
+
+      if (audioCall) {
+        reasons.add("Audio call detected");
+      }
+
+      if (!knownContact) {
+        reasons.add("Unknown contact");
+      }
+
+      if (!nearby) {
+        reasons.add("Outside usual location");
+      }
+
+      if (amount >= 10000) {
+        reasons.add("Transaction amount requires extra verification");
+      }
+    }
+
+    // LOW RISK REASON
+    else {
+      reasons.add("No suspicious demo factors detected");
+      reasons.add("Known contact and normal location");
+      reasons.add("Normal transaction pattern");
+    }
+
+    if (reasons.isEmpty) {
+      reasons.add("Demo risk classification");
+    }
+
+    return reasons;
+  }
+
+  // ============================================================
   // ANALYZE
   // ============================================================
 
@@ -294,6 +391,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
     setState(() {
       riskLevel = risk;
+      riskReasons = getRiskReasons(risk);
     });
 
     _showRiskResult(risk);
@@ -348,51 +446,77 @@ class _ScannerScreenState extends State<ScannerScreen> {
             ],
           ),
 
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                riskIcon,
-                size: 75,
-                color: riskColor,
-              ),
-
-              const SizedBox(height: 15),
-
-              Text(
-                description,
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 15),
-
-              Text(
-                "Amount: ₹${amountController.text}",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              Text(
-                "Risk detected automatically by VaultPay.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  riskIcon,
+                  size: 75,
                   color: riskColor,
-                  fontWeight: FontWeight.bold,
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 15),
+
+                Text(
+                  description,
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 15),
+
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Risk Reasons:",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: riskColor,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                ...riskReasons.map(
+                  (reason) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info,
+                          color: riskColor,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(reason),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                Text(
+                  "Amount: ₹${amountController.text}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                
+              ],
+            ),
           ),
 
           actions: [
-            // ====================================================
-            // LOW / MEDIUM
-            // Existing CANCEL button remains unchanged.
-            // ====================================================
-
             if (risk != "HIGH")
               TextButton(
                 onPressed: () {
@@ -400,11 +524,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 },
                 child: const Text("CANCEL"),
               ),
-
-            // ====================================================
-            // HIGH RISK
-            // ONE-TAP FREEZE
-            // ====================================================
 
             if (risk == "HIGH")
               TextButton.icon(
@@ -426,10 +545,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   ),
                 ),
               ),
-
-            // ====================================================
-            // CONTINUE
-            // ====================================================
 
             ElevatedButton(
               style: risk == "HIGH"
@@ -457,16 +572,13 @@ class _ScannerScreenState extends State<ScannerScreen> {
   Future<void> oneTapFreeze() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Save freeze status locally for demo.
     await prefs.setBool('account_frozen', true);
 
-    // Save reason for freeze.
     await prefs.setString(
       'freeze_reason',
-      'High-risk transaction detected',
+      riskReasons.join(", "),
     );
 
-    // Save receiver and amount involved.
     await prefs.setString(
       'frozen_receiver',
       scannedText,
@@ -479,7 +591,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
     if (!mounted) return;
 
-    // Stop scanner so another payment cannot start immediately.
     scannerController.stop();
 
     showDialog(
@@ -580,18 +691,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
     }
 
     if (risk == "LOW") {
-      // LOW:
-      // PIN -> Payment confirmation
-
       showPinVerification(
         nextStep: () {
           showPaymentConfirmation();
         },
       );
     } else if (risk == "MEDIUM") {
-      // MEDIUM:
-      // OTP -> Fingerprint -> PIN -> Confirmation
-
       showOtpVerification(
         nextStep: () {
           showDemoFingerprint(
@@ -606,9 +711,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
         },
       );
     } else {
-      // HIGH:
-      // Continue -> Email approval -> OTP -> Face -> PIN
-
       showHighRiskFlow();
     }
   }
@@ -921,10 +1023,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
           ),
 
           actions: [
-            // ====================================================
-            // ONE-TAP FREEZE
-            // ====================================================
-
             TextButton.icon(
               style: TextButton.styleFrom(
                 foregroundColor: Colors.red,
@@ -943,10 +1041,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 ),
               ),
             ),
-
-            // ====================================================
-            // CONTINUE
-            // ====================================================
 
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -1276,6 +1370,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
       riskLevel = "";
       scanCompleted = false;
 
+      riskReasons.clear();
+
       nearby = true;
       knownContact = true;
       unusualTime = false;
@@ -1283,6 +1379,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
       muleAccount = false;
       liveVideo = false;
       scamSms = false;
+      suspiciousApk = false;
     });
 
     scannerController.start();

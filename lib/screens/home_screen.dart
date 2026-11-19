@@ -4,7 +4,7 @@ import 'scanner_screen.dart';
 import 'send_money_screen.dart';
 import 'transaction_history_screen.dart';
 import 'freeze_account_screen.dart';
-import 'auto_debit_screen.dart';
+
 import 'balance_screen.dart';
 import 'recharge_screen.dart';
 
@@ -30,24 +30,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    
     if (index == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const AutoDebitScreen(),
-        ),
-      ).then((_) {
-        if (!mounted) return;
-
-        setState(() {
-          currentIndex = 0;
-        });
-      });
-
-      return;
-    }
-
-    if (index == 2) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -440,10 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Home',
           ),
 
-          BottomNavigationBarItem(
-            icon: Icon(Icons.autorenew),
-            label: 'Auto Debit',
-          ),
+          
 
           BottomNavigationBarItem(
             icon: Icon(Icons.lock),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'freeze_account_screen.dart';
+import 'bank_selection_screen.dart';
 
 class SendMoneyScreen extends StatefulWidget {
   const SendMoneyScreen({super.key});
@@ -13,6 +14,8 @@ class SendMoneyScreen extends StatefulWidget {
 }
 
 class _SendMoneyScreenState extends State<SendMoneyScreen> {
+  BankAccount? selectedBank;
+
   final TextEditingController mobileController =
       TextEditingController();
 
@@ -43,6 +46,25 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
   }
 
   // ============================================================
+  // BANK SELECTION
+  // ============================================================
+
+  Future<void> selectBankAccount() async {
+    final BankAccount? bank = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BankSelectionScreen(),
+      ),
+    );
+
+    if (bank != null) {
+      setState(() {
+        selectedBank = bank;
+      });
+    }
+  }
+
+  // ============================================================
   // SEND MONEY
   // ============================================================
 
@@ -67,9 +89,31 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
       return;
     }
 
+    // ==========================================================
+    // SELECT BANK BEFORE AI CLASSIFICATION
+    // ==========================================================
+
+    final BankAccount? bank = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BankSelectionScreen(),
+      ),
+    );
+
+    // User cancelled bank selection
+    if (bank == null) {
+      return;
+    }
+
+    // Store selected bank
     setState(() {
+      selectedBank = bank;
       loading = true;
     });
+
+    // ==========================================================
+    // AI CLASSIFICATION
+    // ==========================================================
 
     await Future.delayed(
       const Duration(milliseconds: 500),
@@ -107,7 +151,6 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
     }
 
     // Demo mobile number classification
-    //
     // 1,2,6 -> HIGH
 
     final firstDigit = mobile.substring(0, 1);
@@ -620,11 +663,6 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
 
   // ============================================================
   // HIGH RISK OPTIONS
-  //
-  // HIGH RISK ->
-  // ONE-TAP FREEZE
-  // OR
-  // CONTINUE
   // ============================================================
 
   void showHighRiskOptions() {
@@ -697,9 +735,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
           ),
 
           actions: [
-            // ==================================================
             // ONE-TAP FREEZE
-            // ==================================================
 
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
@@ -727,9 +763,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
               ),
             ),
 
-            // ==================================================
             // CONTINUE PAYMENT
-            // ==================================================
 
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -842,94 +876,14 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
   // ============================================================
 
   void startHighRiskPayment() {
-    showDelayScreen();
+      showEmailApproval();
+
   }
 
   // ============================================================
   // 20 MINUTE SECURITY DELAY
   // ============================================================
 
-  void showDelayScreen() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(
-                Icons.timer,
-                color: Colors.red,
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "20-Minute Security Delay",
-                ),
-              ),
-            ],
-          ),
-
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.schedule,
-                size: 90,
-                color: Colors.red,
-              ),
-
-              const SizedBox(height: 15),
-
-              const Text(
-                "This high-risk payment has been placed under a 20-minute security delay.",
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 15),
-
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius:
-                      BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  "DEMO: The delay is simulated for the hackathon.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text("CANCEL"),
-            ),
-
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-
-                showEmailApproval();
-              },
-              child: const Text(
-                "CONTINUE DEMO",
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   // ============================================================
   // EMAIL APPROVAL
@@ -1263,6 +1217,42 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
 
               const SizedBox(height: 15),
 
+              // SELECTED BANK
+              if (selectedBank != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius:
+                        BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        "Pay From",
+                        style: TextStyle(
+                          color: Colors.black54,
+                          fontSize: 13,
+                        ),
+                      ),
+
+                      const SizedBox(height: 5),
+
+                      Text(
+                        "${selectedBank!.bankName} ${selectedBank!.accountNumber}",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              const SizedBox(height: 15),
+
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -1366,6 +1356,15 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
 
               const SizedBox(height: 10),
 
+              if (selectedBank != null)
+                Text(
+                  "From: ${selectedBank!.bankName} "
+                  "${selectedBank!.accountNumber}",
+                  textAlign: TextAlign.center,
+                ),
+
+              const SizedBox(height: 10),
+
               Text(
                 "Risk: $riskLevel",
                 style: const TextStyle(
@@ -1403,6 +1402,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
 
     setState(() {
       riskLevel = "";
+      selectedBank = null;
     });
   }
 
@@ -1521,9 +1521,9 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
               ),
             ),
 
-            const SizedBox(height: 10),
-
+            // ==================================================
             // SECURITY INFO
+            // ==================================================
 
             Container(
               width: double.infinity,
@@ -1558,7 +1558,9 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
 
             const SizedBox(height: 25),
 
+            // ==================================================
             // SEND BUTTON
+            // ==================================================
 
             SizedBox(
               width: double.infinity,
@@ -1566,6 +1568,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
               child: ElevatedButton.icon(
                 onPressed:
                     loading ? null : sendMoney,
+
                 icon: loading
                     ? const SizedBox(
                         width: 22,
@@ -1579,6 +1582,7 @@ class _SendMoneyScreenState extends State<SendMoneyScreen> {
                     : const Icon(
                         Icons.send,
                       ),
+
                 label: Text(
                   loading
                       ? "ANALYZING..."
